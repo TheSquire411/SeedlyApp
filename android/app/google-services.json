@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "948687707686",
+    "project_id": "seedly-c723e",
+    "storage_bucket": "seedly-c723e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:948687707686:android:6912fe708a0f6185b1d0e7",
+        "android_client_info": {
+          "package_name": "com.seedly.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYghzdc_91Bfk9a4yXHuI_E2zSzUrw2GU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
