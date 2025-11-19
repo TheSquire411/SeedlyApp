@@ -1,0 +1,9 @@
+{
+  "name": "Seedly",
+  "description": "A hyper-local gamified gardening companion powered by AI.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
