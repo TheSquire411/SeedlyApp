@@ -1,6 +1,6 @@
 import React from 'react';
 import { Plant } from '../types';
-import { Droplets, Sun } from 'lucide-react';
+import { Droplets, Sun, Thermometer } from 'lucide-react';
 
 interface PlantCardProps {
   plant: Plant;

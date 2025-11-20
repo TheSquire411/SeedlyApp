@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { WeatherData } from '../types';
 import { getWeatherAdvice } from '../services/gemini';
-import { Droplets, Wind } from 'lucide-react';
+import { CloudSun, Droplets, Wind } from 'lucide-react';
 
 interface WeatherCardProps {
   location: string;

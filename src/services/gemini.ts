@@ -1,7 +1,11 @@
 import { GoogleGenAI, Type, Schema, Chat } from "@google/genai";
 import { IdentifyResult, DiagnosisResult, WeatherData, Plant } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// ---------------------------------------------------------------------------
+// 👇 ACTION REQUIRED: Paste your Gemini API Key inside the quotes below
+// ---------------------------------------------------------------------------
+const ai = new GoogleGenAI({ apiKey: "AIzaSyDPffMb066yYMh0YUHNulX5ZTAOr16BPWc" });
+// ---------------------------------------------------------------------------
 
 const identifySchema: Schema = {
   type: Type.OBJECT,
@@ -23,8 +27,8 @@ const identifySchema: Schema = {
       items: {
         type: Type.OBJECT,
         properties: {
-            name: { type: Type.STRING, description: "Name of a companion plant" },
-            benefit: { type: Type.STRING, description: "Specific benefit (e.g. 'Repels aphids', 'Fixes nitrogen', 'Provides shade')" }
+          name: { type: Type.STRING, description: "Name of a companion plant" },
+          benefit: { type: Type.STRING, description: "Specific benefit (e.g. 'Repels aphids', 'Fixes nitrogen', 'Provides shade')" }
         },
         required: ["name", "benefit"]
       },
@@ -36,24 +40,24 @@ const identifySchema: Schema = {
       description: "3 clear, concise, and critical care tips for this plant (e.g. 'Keep soil moist', 'Avoid direct sun')"
     },
     visualGuides: {
-        type: Type.ARRAY,
-        description: "A step-by-step guide for a complex task relevant to this plant (e.g. Repotting, Pruning, Propagation). Provide 1 guide.",
-        items: {
-            type: Type.OBJECT,
-            properties: {
-                title: { type: Type.STRING, description: "Title of the guide (e.g. 'How to Repot')"},
-                steps: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            title: { type: Type.STRING, description: "Short step title"},
-                            description: { type: Type.STRING, description: "Clear instruction for this step"}
-                        }
-                    }
-                }
+      type: Type.ARRAY,
+      description: "A step-by-step guide for a complex task relevant to this plant (e.g. Repotting, Pruning, Propagation). Provide 1 guide.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING, description: "Title of the guide (e.g. 'How to Repot')" },
+          steps: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING, description: "Short step title" },
+                description: { type: Type.STRING, description: "Clear instruction for this step" }
+              }
             }
+          }
         }
+      }
     },
     description: { type: Type.STRING, description: "Short description of the plant" },
     funFact: { type: Type.STRING, description: "A fun short fact about the plant" },
@@ -66,10 +70,10 @@ const diagnosisSchema: Schema = {
   properties: {
     issue: { type: Type.STRING, description: "Name of the disease or pest" },
     description: { type: Type.STRING, description: "Description of the symptoms observed" },
-    treatment: { 
-      type: Type.ARRAY, 
+    treatment: {
+      type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: "Step by step treatment instructions" 
+      description: "Step by step treatment instructions"
     },
     prevention: { type: Type.STRING, description: "How to prevent this in the future" },
     confidence: { type: Type.NUMBER, description: "Confidence score between 0 and 100" },
@@ -78,19 +82,20 @@ const diagnosisSchema: Schema = {
 };
 
 const weatherSchema: Schema = {
-    type: Type.OBJECT,
-    properties: {
-        temp: { type: Type.NUMBER, description: "Estimated temperature in Celsius" },
-        condition: { type: Type.STRING, description: "Weather condition (Sunny, Rainy, Cloudy)" },
-        humidity: { type: Type.NUMBER, description: "Humidity percentage" },
-        icon: { type: Type.STRING, description: "An emoji representing the weather" },
-        advice: { type: Type.STRING, description: "Short gardening advice based on this weather" }
-    },
-    required: ["temp", "condition", "humidity", "icon", "advice"]
+  type: Type.OBJECT,
+  properties: {
+    temp: { type: Type.NUMBER, description: "Estimated temperature in Celsius" },
+    condition: { type: Type.STRING, description: "Weather condition (Sunny, Rainy, Cloudy)" },
+    humidity: { type: Type.NUMBER, description: "Humidity percentage" },
+    icon: { type: Type.STRING, description: "An emoji representing the weather" },
+    advice: { type: Type.STRING, description: "Short gardening advice based on this weather" }
+  },
+  required: ["temp", "condition", "humidity", "icon", "advice"]
 }
 
 export const identifyPlant = async (base64Image: string, location: string): Promise<IdentifyResult> => {
   try {
+    // Remove header if present to get raw base64
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const response = await ai.models.generateContent({
@@ -160,38 +165,38 @@ export const diagnosePlant = async (base64Image: string, description: string): P
 };
 
 export const getWeatherAdvice = async (location: string): Promise<WeatherData> => {
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: `Generate a realistic current weather report for ${location} (assume current month/season). Provide gardening advice.`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: weatherSchema
-            }
-        });
-        
-        if (response.text) {
-            return JSON.parse(response.text) as WeatherData;
-        }
-        throw new Error("No weather data");
-    } catch (e) {
-        console.error("Weather Error", e);
-        return {
-            temp: 22,
-            condition: "Sunny",
-            humidity: 50,
-            icon: "☀️",
-            advice: "It's a beautiful day! Check your plants for hydration."
-        }
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Generate a realistic current weather report for ${location} (assume current month/season). Provide gardening advice.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: weatherSchema
+      }
+    });
+
+    if (response.text) {
+      return JSON.parse(response.text) as WeatherData;
     }
+    throw new Error("No weather data");
+  } catch (e) {
+    console.error("Weather Error", e);
+    return {
+      temp: 22,
+      condition: "Sunny",
+      humidity: 50,
+      icon: "☀️",
+      advice: "It's a beautiful day! Check your plants for hydration."
+    }
+  }
 }
 
 export const createGardenChat = (plants: Plant[], location: string): Chat => {
-    const gardenContext = plants.map(p => 
-        `- ${p.nickname || p.name} (${p.scientificName}): Health is ${p.health}. Care: Water ${p.care.water}, Light ${p.care.sun}.`
-    ).join('\n');
+  const gardenContext = plants.map(p =>
+    `- ${p.nickname || p.name} (${p.scientificName}): Health is ${p.health}. Care: Water ${p.care.water}, Light ${p.care.sun}.`
+  ).join('\n');
 
-    const systemInstruction = `You are Seedly, a helpful and friendly AI gardening assistant. 
+  const systemInstruction = `You are Seedly, a helpful and friendly AI gardening assistant. 
     The user is located in ${location}.
     
     Here is the user's current garden inventory:
@@ -202,10 +207,10 @@ export const createGardenChat = (plants: Plant[], location: string): Chat => {
     Be encouraging, use emojis, and keep answers concise and practical.
     If the user asks about a plant not in their garden, answer generally but suggest if it would be a good fit for their location.`;
 
-    return ai.chats.create({
-        model: 'gemini-2.5-flash',
-        config: {
-            systemInstruction
-        }
-    });
+  return ai.chats.create({
+    model: 'gemini-2.5-flash',
+    config: {
+      systemInstruction
+    }
+  });
 }
