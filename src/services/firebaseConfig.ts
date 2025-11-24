@@ -2,18 +2,19 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
+// 👇 NOW USING ENV VARIABLES
 const firebaseConfig = {
-    apiKey: "AIzaSyC4Ur1MsWGyBMQzS4QQp2ZEWhoUUGhBRI",
-    authDomain: "seedly-app.firebaseapp.com",
-    projectId: "seedly-app",
-    storageBucket: "seedly-app.appspot.com",
-    messagingSenderId: "948687707686",
-    appId: "1:948687707686:web:ed51b53c65763184b1d0e7"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-console.log("🔥 FIREBASE CONFIG LOADED SUCCESSFULLY");
+console.log("🔥 FIREBASE CONFIG LOADED VIA ENV");
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);

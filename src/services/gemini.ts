@@ -2,9 +2,17 @@ import { GoogleGenAI, Type, Schema, Chat } from "@google/genai";
 import { IdentifyResult, DiagnosisResult, WeatherData, Plant } from "../types";
 
 // ---------------------------------------------------------------------------
-// 👇 ACTION REQUIRED: Paste your Gemini API Key inside the quotes below
+// ✅ SECURE CONFIGURATION
 // ---------------------------------------------------------------------------
-const ai = new GoogleGenAI({ apiKey: "AIzaSyDPffMb066yYMh0YUHNulX5ZTAOr16BPWc" });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+// Safety Check: Warn if key is missing
+if (!apiKey) {
+  console.error("❌ CRITICAL ERROR: VITE_GEMINI_API_KEY is missing from .env file");
+}
+
+// 👇 THIS WAS LIKELY MISSING OR BROKEN IN YOUR FILE
+const ai = new GoogleGenAI({ apiKey: apiKey || "" });
 // ---------------------------------------------------------------------------
 
 const identifySchema: Schema = {
@@ -95,7 +103,6 @@ const weatherSchema: Schema = {
 
 export const identifyPlant = async (base64Image: string, location: string): Promise<IdentifyResult> => {
   try {
-    // Remove header if present to get raw base64
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const response = await ai.models.generateContent({

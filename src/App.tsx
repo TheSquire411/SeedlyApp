@@ -8,8 +8,9 @@ import { identifyPlant, diagnosePlant, createGardenChat } from './services/gemin
 import { initializeRevenueCat, checkSubscriptionStatus, getOfferings, purchasePackage } from './services/revenueCat';
 import SubscriptionModal from './components/SubscriptionModal';
 import { Chat, GenerateContentResponse } from "@google/genai";
-import { Plus, Search, Bell, MapPin, Camera, Upload, X, Loader2, CheckCircle, Leaf, AlertTriangle, ScanLine, Trophy, Award, Droplet, Star, ChevronLeft, Calendar, Sparkles, CloudRain, RefreshCw, Clock, Trash2, History, Users, Lightbulb, ShieldCheck, Sprout, Layers, Scissors, Shovel, Send, Bot, MessageCircle } from 'lucide-react';
-
+import { Plus, Search, Bell, MapPin, Camera as CameraIcon, Upload, X, Loader2, CheckCircle, Leaf, AlertTriangle, ScanLine, Trophy, Award, Droplet, Star, ChevronLeft, Calendar, Sparkles, CloudRain, RefreshCw, Clock, Trash2, History, Users, Lightbulb, ShieldCheck, Sprout, Layers, Scissors, Shovel, Send, Bot, MessageCircle } from 'lucide-react';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Geolocation } from '@capacitor/geolocation';
 // --- Gamification Data ---
 
 const ALL_ACHIEVEMENTS: Omit<Achievement, 'unlockedAt'>[] = [
@@ -150,7 +151,39 @@ const App: React.FC = () => {
     const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    useEffect(() => {
+        const getUserLocation = async () => {
+            try {
+                const permission = await Geolocation.checkPermissions();
+                if (permission.location === 'prompt' || permission.location === 'prompt-with-rationale') {
+                    await Geolocation.requestPermissions();
+                }
 
+                const position = await Geolocation.getCurrentPosition();
+                const { latitude, longitude } = position.coords;
+
+                // Convert to City Name using BigDataCloud (Free API)
+                const response = await fetch(
+                    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+                );
+                const data = await response.json();
+
+                // Logic to find the best name
+                const city = data.city || data.locality || "Unknown City";
+                const region = data.principalSubdivision || data.countryName;
+                const locationString = `${city}, ${region}`;
+
+                // Update State
+                setUser(prev => ({ ...prev, location: locationString }));
+                console.log("📍 Location updated:", locationString);
+
+            } catch (error) {
+                console.error("Error getting location", error);
+            }
+        };
+
+        getUserLocation();
+    }, []);
     useEffect(() => {
         const init = async () => {
             await initializeRevenueCat();
@@ -343,7 +376,22 @@ const App: React.FC = () => {
             reader.readAsDataURL(file);
         }
     };
+    const handleTakePhoto = async () => {
+        try {
+            const image = await Camera.getPhoto({
+                quality: 90,
+                allowEditing: false,
+                resultType: CameraResultType.DataUrl, // Returns base64 string (perfect for Gemini)
+                source: CameraSource.Camera // 👈 This forces the Camera to open
+            });
 
+            if (image.dataUrl) {
+                setSelectedImage(image.dataUrl);
+            }
+        } catch (error) {
+            console.log("User cancelled or camera error", error);
+        }
+    };
     const handleIdentify = async () => {
         if (!selectedImage) return;
         setIsAnalyzing(true);
@@ -1074,7 +1122,7 @@ const App: React.FC = () => {
                     ) : (
                         <div className="w-full aspect-[3/4] border-2 border-dashed border-gray-300 rounded-3xl flex flex-col items-center justify-center gap-4 bg-gray-50 mb-6">
                             <div className="w-20 h-20 bg-lime-100 rounded-full flex items-center justify-center text-lime-600">
-                                <Camera size={40} />
+                                <CameraIcon size={40} />
                             </div>
                             <p className="text-gray-400 font-medium">No image selected</p>
                         </div>
@@ -1094,25 +1142,29 @@ const App: React.FC = () => {
                                     {isIdentify ? 'Identify' : 'Diagnose'}
                                 </button>
                             </div>
-                        ) : (
-                            <>
-                                <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-white border-2 border-gray-100 text-gray-600 font-bold py-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform">
-                                    <Upload size={24} />
-                                    <span className="text-xs">Upload</span>
-                                </button>
-                                <button onClick={() => fileInputRef.current?.click()} className="flex-[2] bg-lime-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-lime-200 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform">
-                                    <Camera size={28} />
-                                    <span className="text-xs">Take Photo</span>
-                                </button>
-                            </>
-                        )}
+                        ) : <>
+                            {/* Upload Button (Keeps using the hidden file input for Gallery) */}
+                            <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-white border-2 border-gray-100 text-gray-600 font-bold py-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform">
+                                <Upload size={24} />
+                                <span className="text-xs">Upload</span>
+                            </button>
+
+                            {/* Take Photo Button (Updated to use Native Camera) */}
+                            <button
+                                onClick={handleTakePhoto}  // 👈 CHANGED: Uses native camera function
+                                className="flex-[2] bg-lime-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-lime-200 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+                            >
+                                <CameraIcon size={28} />   {/* 👈 CHANGED: Uses the renamed icon */}
+                                <span className="text-xs">Take Photo</span>
+                            </button>
+                        </>}
                     </div>
                 </div>
                 <input
                     type="file"
                     ref={fileInputRef}
                     accept="image/*"
-                    capture="environment"
+
                     className="hidden"
                     onChange={handleFileSelect}
                 />
