@@ -1,16 +1,34 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Navigation from './components/Navigation';
 import PlantCard from './components/PlantCard';
 import WeatherCard from './components/WeatherCard';
 import { View, Plant, UserProfile, IdentifyResult, DiagnosisResult, Achievement, Reminder, ReminderType, ChatMessage } from './types';
 import { identifyPlant, diagnosePlant, createGardenChat } from './services/gemini';
-import { initializeRevenueCat, checkSubscriptionStatus, getOfferings, purchasePackage } from './services/revenueCat';
-import SubscriptionModal from './components/SubscriptionModal';
 import { Chat, GenerateContentResponse } from "@google/genai";
-import { Plus, Search, Bell, MapPin, Camera as CameraIcon, Upload, X, Loader2, CheckCircle, Leaf, AlertTriangle, ScanLine, Trophy, Award, Droplet, Star, ChevronLeft, Calendar, Sparkles, CloudRain, RefreshCw, Clock, Trash2, History, Users, Lightbulb, ShieldCheck, Sprout, Layers, Scissors, Shovel, Send, Bot, MessageCircle } from 'lucide-react';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Geolocation } from '@capacitor/geolocation';
+import { initializeRevenueCat, checkSubscriptionStatus, getOfferings, purchasePackage } from './services/revenueCat';
+import { signInWithGoogle, getUser } from './services/authService';
+
+// 👇 THESE ARE THE CRITICAL FIREBASE IMPORTS
+import { auth } from './services/firebaseConfig';
+import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import {
+    getMyGarden,
+    addPlantToGarden,
+    updatePlantInGarden,
+    deletePlantFromGarden
+} from './services/gardenService';
+
+// Icon Imports (Renaming Camera to avoid conflict with Capacitor Camera)
+import {
+    Plus, Search, Bell, MapPin, Camera as CameraIcon, Upload, X, Loader2,
+    CheckCircle, Leaf, AlertTriangle, ScanLine, Trophy, Award, Droplet,
+    Star, ChevronLeft, Calendar, Sparkles, CloudRain, RefreshCw, Clock,
+    Trash2, History, Users, Lightbulb, ShieldCheck, Sprout, Layers,
+    Scissors, Shovel, Send, Bot, MessageCircle, Crown
+} from 'lucide-react';
+
 // --- Gamification Data ---
 
 const ALL_ACHIEVEMENTS: Omit<Achievement, 'unlockedAt'>[] = [
@@ -23,13 +41,13 @@ const ALL_ACHIEVEMENTS: Omit<Achievement, 'unlockedAt'>[] = [
 
 // Initial Mock Data
 const INITIAL_USER: UserProfile = {
-    name: "Alex",
-    location: "San Francisco, CA",
-    level: 3,
-    xp: 340,
+    name: "Guest",
+    location: "Unknown",
+    level: 1,
+    xp: 0,
     joinedDate: "2023-01-15",
     stats: {
-        plantsAdded: 2,
+        plantsAdded: 0,
         plantsDiagnosed: 0,
         plantsIdentified: 0,
         wateringTasksCompleted: 0,
@@ -75,41 +93,6 @@ const INITIAL_PLANTS: Plant[] = [
         ],
         health: 'Good',
         dateAdded: new Date().toISOString()
-    },
-    {
-        id: '2',
-        name: 'Monstera',
-        scientificName: 'Monstera deliciosa',
-        image: 'https://images.unsplash.com/photo-1614594975525-e458521fc100?q=80&w=1000&auto=format&fit=crop',
-        care: { water: 'Every 1-2 weeks', sun: 'Bright Indirect', temp: '20-30°C', humidity: 'Medium' },
-        reminders: [
-            { id: 'r3', type: 'water', title: 'Water', frequencyDays: 10, nextDue: new Date(Date.now() - 100000).toISOString() } // Overdue
-        ],
-        wateringHistory: [
-            new Date(Date.now() - 86400000 * 12).toISOString()
-        ],
-        companions: [
-            { name: 'Rubber Plant', benefit: 'Strong structural contrast for aesthetic' },
-            { name: 'Schefflera', benefit: 'Repels spider mites that often attack Monstera' }
-        ],
-        quickTips: [
-            "Allow the top 2-3 inches of soil to dry out between waterings.",
-            "Wipe dust off leaves regularly for better photosynthesis.",
-            "Rotate the plant occasionally for even growth."
-        ],
-        visualGuides: [
-            {
-                title: "Pruning & Propagation",
-                steps: [
-                    { title: "Identify Node", description: "Locate a node (a bump on the stem where leaves/roots grow)." },
-                    { title: "Cut Below Node", description: "Use clean, sharp shears to cut about an inch below the node/aerial root." },
-                    { title: "Place in Water", description: "Put the cutting in a jar of water, ensuring the node is submerged but leaves are not." },
-                    { title: "Wait for Roots", description: "Change water weekly. Pot into soil once roots are 2-3 inches long." }
-                ]
-            }
-        ],
-        health: 'Good',
-        dateAdded: new Date().toISOString()
     }
 ];
 
@@ -118,10 +101,40 @@ const App: React.FC = () => {
     const [user, setUser] = useState<UserProfile>(INITIAL_USER);
     const [plants, setPlants] = useState<Plant[]>(INITIAL_PLANTS);
     const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
+    const [uid, setUid] = useState<string | null>(null);
+    const [isLoadingData, setIsLoadingData] = useState(true);
 
-    // Subscription State
-    const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-    const [isPro, setIsPro] = useState(false);
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            setIsLoadingData(true);
+            if (currentUser) {
+                console.log("✅ Firebase User Detected:", currentUser.uid);
+                setUid(currentUser.uid);
+
+                // Fetch Data
+                try {
+                    const dbPlants = await getMyGarden(currentUser.uid);
+                    if (dbPlants.length > 0) {
+                        setPlants(dbPlants);
+                    }
+                } catch (error) {
+                    console.error("Error loading garden:", error);
+                }
+            } else {
+                console.log("⚠️ No Firebase User - Signing in Anonymously...");
+                // 👇 THIS IS THE MAGIC FIX
+                signInAnonymously(auth).catch((error) => {
+                    console.error("Auto-login failed:", error);
+                });
+            }
+            setIsLoadingData(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+
+
 
     // Identify/Diagnose State
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -151,6 +164,27 @@ const App: React.FC = () => {
     const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // --- EFFECTS ---
+
+    // 1. Init RevenueCat
+    useEffect(() => {
+        initializeRevenueCat();
+    }, []);
+
+    // 2. Check Google Session
+    useEffect(() => {
+        const checkSession = async () => {
+            const loggedInUser = await getUser();
+            if (loggedInUser) {
+                console.log("Restoring session for:", loggedInUser.name);
+                setUser(loggedInUser);
+            }
+        };
+        checkSession();
+    }, []);
+
+    // 3. Get Location
     useEffect(() => {
         const getUserLocation = async () => {
             try {
@@ -168,12 +202,10 @@ const App: React.FC = () => {
                 );
                 const data = await response.json();
 
-                // Logic to find the best name
                 const city = data.city || data.locality || "Unknown City";
                 const region = data.principalSubdivision || data.countryName;
                 const locationString = `${city}, ${region}`;
 
-                // Update State
                 setUser(prev => ({ ...prev, location: locationString }));
                 console.log("📍 Location updated:", locationString);
 
@@ -184,21 +216,15 @@ const App: React.FC = () => {
 
         getUserLocation();
     }, []);
-    useEffect(() => {
-        const init = async () => {
-            await initializeRevenueCat();
-            const status = await checkSubscriptionStatus();
-            setIsPro(status);
-        };
-        init();
-    }, []);
 
+    // 4. Chat Session
     useEffect(() => {
         if (currentView === View.CHAT && !chatSession.current) {
             chatSession.current = createGardenChat(plants, user.location);
         }
     }, [currentView, plants, user.location]);
 
+    // 5. Chat Scroll
     useEffect(() => {
         if (currentView === View.CHAT) {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -233,9 +259,9 @@ const App: React.FC = () => {
                 ...prev,
                 achievements: [...prev.achievements, ...unlocked],
                 xp: prev.xp + rewardXP,
-                level: Math.floor((prev.xp + rewardXP) / 500) + 1 // Simple level logic
+                level: Math.floor((prev.xp + rewardXP) / 500) + 1
             }));
-            setNewAchievement(unlocked[0]); // Show the first one
+            setNewAchievement(unlocked[0]);
         }
     };
 
@@ -247,7 +273,6 @@ const App: React.FC = () => {
             const isWatering = reminder?.type === 'water';
             const now = new Date().toISOString();
 
-            // Update local selected plant if it's the one being viewed
             if (selectedPlant && selectedPlant.id === plantId) {
                 const updatedLocal = {
                     ...p,
@@ -278,7 +303,6 @@ const App: React.FC = () => {
             };
         }));
 
-        // Update user stats if it was a watering task
         setUser(prev => {
             const newStats = { ...prev.stats, wateringTasksCompleted: prev.stats.wateringTasksCompleted + 1 };
             checkAchievements(newStats, prev.achievements);
@@ -308,7 +332,7 @@ const App: React.FC = () => {
         };
 
         setPlants(prev => prev.map(p => p.id === selectedPlant.id ? updatedPlant : p));
-        setSelectedPlant(updatedPlant); // Update local state for view
+        setSelectedPlant(updatedPlant);
         setShowReminderForm(false);
         setNewReminderConfig({ type: 'custom', title: '', freq: 7 });
     };
@@ -376,13 +400,14 @@ const App: React.FC = () => {
             reader.readAsDataURL(file);
         }
     };
+
     const handleTakePhoto = async () => {
         try {
             const image = await Camera.getPhoto({
                 quality: 90,
                 allowEditing: false,
-                resultType: CameraResultType.DataUrl, // Returns base64 string (perfect for Gemini)
-                source: CameraSource.Camera // 👈 This forces the Camera to open
+                resultType: CameraResultType.DataUrl,
+                source: CameraSource.Camera
             });
 
             if (image.dataUrl) {
@@ -392,6 +417,7 @@ const App: React.FC = () => {
             console.log("User cancelled or camera error", error);
         }
     };
+
     const handleIdentify = async () => {
         if (!selectedImage) return;
         setIsAnalyzing(true);
@@ -399,7 +425,6 @@ const App: React.FC = () => {
             const result = await identifyPlant(selectedImage, user.location);
             setScanResult(result);
 
-            // Update stats
             setUser(prev => {
                 const newStats = { ...prev.stats, plantsIdentified: prev.stats.plantsIdentified + 1 };
                 checkAchievements(newStats, prev.achievements);
@@ -420,7 +445,6 @@ const App: React.FC = () => {
             const result = await diagnosePlant(selectedImage, userPrompt || "Check for any issues");
             setDiagnosisResult(result);
 
-            // Update stats
             setUser(prev => {
                 const newStats = { ...prev.stats, plantsDiagnosed: prev.stats.plantsDiagnosed + 1 };
                 checkAchievements(newStats, prev.achievements);
@@ -434,13 +458,41 @@ const App: React.FC = () => {
         }
     };
 
-    const addToGarden = () => {
+    const addToGarden = async () => {
         if (scanResult && selectedImage) {
+
+            // 👇 HELPER: Compresses image if it's too big
+            const compressImage = (base64Str: string): Promise<string> => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = base64Str;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800; // Shrink to 800px width
+                        const scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
+                        const ctx = canvas.getContext('2d');
+                        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        // Convert to JPEG with 0.7 (70%) quality
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+                });
+            };
+
+            // Check size and compress if needed
+            let finalImage = selectedImage;
+            if (selectedImage.length > 500000) { // If > ~500KB
+                console.log("⚠️ Image too large, compressing...");
+                finalImage = await compressImage(selectedImage);
+                console.log("✅ Image compressed!");
+            }
+
             const newPlant: Plant = {
                 id: Date.now().toString(),
                 name: scanResult.name,
                 scientificName: scanResult.scientificName,
-                image: selectedImage,
+                image: finalImage, // 👈 Using the compressed image here
                 care: scanResult.care,
                 reminders: [
                     { id: `r-${Date.now()}`, type: 'water', title: 'Water', frequencyDays: 7, nextDue: new Date(Date.now() + 86400000).toISOString() }
@@ -452,9 +504,25 @@ const App: React.FC = () => {
                 health: 'Good',
                 dateAdded: new Date().toISOString()
             };
+
+            // 1. Update Local State
             setPlants([newPlant, ...plants]);
 
-            // Update stats and XP
+            // 2. Database Save Logic
+            if (uid) {
+                try {
+                    await addPlantToGarden(uid, newPlant);
+                    console.log("Plant saved to DB!");
+                } catch (e) {
+                    console.error("Failed to save plant to cloud:", e);
+                    alert("Failed to save plant to cloud. It may disappear on restart.");
+                }
+            } else {
+                alert("CRITICAL ERROR: No User ID! You are not logged in.");
+                console.error("❌ Add aborted: uid is null");
+            }
+
+            // 3. Update Stats
             setUser(prev => {
                 const newStats = { ...prev.stats, plantsAdded: prev.stats.plantsAdded + 1 };
                 const newXP = prev.xp + 50;
@@ -462,9 +530,8 @@ const App: React.FC = () => {
                 return { ...prev, stats: newStats, xp: newXP };
             });
 
-            // Reset chat session to include new plant
+            // 4. Reset View
             chatSession.current = null;
-
             resetScanner();
             setCurrentView(View.GARDEN);
         }
@@ -1142,29 +1209,24 @@ const App: React.FC = () => {
                                     {isIdentify ? 'Identify' : 'Diagnose'}
                                 </button>
                             </div>
-                        ) : <>
-                            {/* Upload Button (Keeps using the hidden file input for Gallery) */}
-                            <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-white border-2 border-gray-100 text-gray-600 font-bold py-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform">
-                                <Upload size={24} />
-                                <span className="text-xs">Upload</span>
-                            </button>
-
-                            {/* Take Photo Button (Updated to use Native Camera) */}
-                            <button
-                                onClick={handleTakePhoto}  // 👈 CHANGED: Uses native camera function
-                                className="flex-[2] bg-lime-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-lime-200 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
-                            >
-                                <CameraIcon size={28} />   {/* 👈 CHANGED: Uses the renamed icon */}
-                                <span className="text-xs">Take Photo</span>
-                            </button>
-                        </>}
+                        ) : (
+                            <>
+                                <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-white border-2 border-gray-100 text-gray-600 font-bold py-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform">
+                                    <Upload size={24} />
+                                    <span className="text-xs">Upload</span>
+                                </button>
+                                <button onClick={handleTakePhoto} className="flex-[2] bg-lime-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-lime-200 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform">
+                                    <CameraIcon size={28} />
+                                    <span className="text-xs">Take Photo</span>
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
                 <input
                     type="file"
                     ref={fileInputRef}
                     accept="image/*"
-
                     className="hidden"
                     onChange={handleFileSelect}
                 />
@@ -1180,13 +1242,34 @@ const App: React.FC = () => {
                 <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg overflow-hidden z-10 mb-4 bg-gray-200">
                     <img src="https://picsum.photos/200" alt="Profile" />
                 </div>
+
                 <h2 className="text-2xl font-bold text-gray-800 z-10">{user.name}</h2>
-                <div className="flex items-center gap-1 text-gray-500 z-10 mt-1">
+                <div className="flex items-center gap-1 text-gray-500 z-10 mt-1 mb-4">
                     <MapPin size={16} />
                     <span>{user.location}</span>
                 </div>
 
-                <div className="w-full mt-6 grid grid-cols-3 gap-4 border-t pt-6">
+                {/* Sign In Button */}
+                <button
+                    onClick={async () => {
+                        const googleUser = await signInWithGoogle();
+                        if (googleUser) {
+                            setUser(googleUser);
+                            alert(`Welcome, ${googleUser.name}!`);
+                        }
+                    }}
+                    className="z-10 flex items-center gap-2 bg-white border border-gray-300 text-gray-700 font-bold py-2 px-4 rounded-xl shadow-sm active:scale-95 transition-transform mb-6"
+                >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.2 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                    </svg>
+                    Sign in with Google
+                </button>
+
+                <div className="w-full mt-2 grid grid-cols-3 gap-4 border-t pt-6">
                     <div>
                         <span className="block text-2xl font-bold text-gray-800">{user.level}</span>
                         <span className="text-xs text-gray-400 uppercase font-bold">Level</span>
@@ -1202,7 +1285,7 @@ const App: React.FC = () => {
                 </div>
             </div>
 
-            {/* 👇 NEW: RevenueCat Upgrade Button (Test Mode) */}
+            {/* Upgrade Button */}
             <div className="bg-gradient-to-r from-lime-500 to-green-600 rounded-3xl p-6 shadow-lg text-white relative overflow-hidden">
                 <div className="relative z-10">
                     <h3 className="font-bold text-xl mb-1">Go Pro</h3>
@@ -1210,15 +1293,11 @@ const App: React.FC = () => {
                     <button
                         onClick={async () => {
                             try {
-                                // 1. Get Offerings
                                 const offerings = await getOfferings();
-                                // NOTE: We check for 'monthly' package. Make sure you created a package named 'Monthly' in RevenueCat!
                                 if (offerings && offerings.current && offerings.current.monthly) {
-                                    // 2. Buy the Monthly Package
                                     const success = await purchasePackage(offerings.current.monthly);
                                     if (success) alert("You are now a Pro User! 🌟");
                                 } else {
-                                    console.log("Offerings found:", offerings);
                                     alert("No 'monthly' package found. Check RevenueCat dashboard setup.");
                                 }
                             } catch (e) {
@@ -1230,10 +1309,8 @@ const App: React.FC = () => {
                         Upgrade for $4.99
                     </button>
                 </div>
-                {/* Decorative circle */}
                 <div className="absolute -right-4 -bottom-8 w-32 h-32 bg-white/20 rounded-full blur-xl"></div>
             </div>
-            {/* 👆 END NEW BUTTON */}
 
             {/* Achievements Section */}
             <div className="bg-white rounded-3xl p-6 shadow-sm">
@@ -1285,13 +1362,8 @@ const App: React.FC = () => {
         </div>
     );
 
-
-
-
-
     return (
-        <div className="min-h-screen bg-[#F3F4F6] text-gray-800 font-sans flex justify-center" >
-            {/* Achievement Unlocked Modal */}
+        <div className="min-h-screen bg-[#F3F4F6] text-gray-800 font-sans flex justify-center">
             {newAchievement && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm text-center shadow-2xl animate-in zoom-in-95 duration-300 relative overflow-hidden">
@@ -1320,7 +1392,6 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            {/* Plant Details Overlay */}
             {renderPlantDetails()}
 
             <div className="w-full max-w-md h-screen overflow-y-auto bg-[#F3F4F6] px-6 pt-6 no-scrollbar">
@@ -1331,18 +1402,11 @@ const App: React.FC = () => {
                 {currentView === View.PROFILE && renderProfile()}
                 {currentView === View.CHAT && renderChat()}
             </div>
-            <Navigation
-                currentView={currentView}
-                onNavigate={(view) => {
-                    resetScanner();
-                    setCurrentView(view);
-                }}
-                onUpgrade={() => setShowSubscriptionModal(true)}
-            />
-            <SubscriptionModal
-                isOpen={showSubscriptionModal}
-                onClose={() => setShowSubscriptionModal(false)}
-                onSuccess={() => setIsPro(true)}
+            <Navigation currentView={currentView} onNavigate={(view) => {
+                resetScanner();
+                setCurrentView(view);
+            }}
+                onUpgrade={() => setCurrentView(View.PROFILE)}
             />
         </div>
     );

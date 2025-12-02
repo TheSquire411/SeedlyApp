@@ -5,11 +5,17 @@ const config: CapacitorConfig = {
   appName: 'Seedly',
   webDir: 'dist',
 
-  // 👇 Add the plugins block here (Don't forget the comma above!)
   plugins: {
+    // 👇 Added Firebase Auth Configuration
+    FirebaseAuthentication: {
+      skipNativeAuth: false,
+      providers: ["google.com"],
+    },
+
+    // Existing Splash Screen Configuration
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: "#234232", // Your Dark Green from Figma
+      backgroundColor: "#234232", // Your Dark Green
       showSpinner: false,
       androidScaleType: "CENTER_CROP",
       splashFullScreen: true,

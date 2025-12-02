@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor-firebase/authentication": "^7.4.0",
     "@capacitor/android": "^7.4.4",
     "@capacitor/camera": "^7.0.2",
     "@capacitor/cli": "^7.4.4",
@@ -17,7 +18,7 @@
     "@google/genai": "^1.30.0",
     "@revenuecat/purchases-capacitor": "^11.2.13",
     "@revenuecat/purchases-capacitor-ui": "^11.2.13",
-    "firebase": "^10.14.1",
+    "firebase": "^11.10.0",
     "lucide-react": "^0.554.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

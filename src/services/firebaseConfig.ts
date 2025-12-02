@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// 👇 NOW USING ENV VARIABLES
+// Use environment variables (Vite automatically loads variables starting with VITE_)
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -14,7 +14,7 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-console.log("🔥 FIREBASE CONFIG LOADED VIA ENV");
+console.log("🔥 FIREBASE INITIALIZED:", firebaseConfig.projectId);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
