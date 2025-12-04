@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core';
 // ---------------------------------------------------------
 const API_KEYS = {
     ios: "appl_PLACEHOLDER_FOR_LATER", // Will need this for iPhone
-    android: "test_MAHgAtTEEPUdXSQueqdnFKJaZay", // <--- PASTE YOUR KEY HERE
+    android: "goog_qhQJaPigGmncWDpkEARfecKmbmv", // <--- PASTE YOUR KEY HERE
 };
 // ---------------------------------------------------------
 
