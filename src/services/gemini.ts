@@ -242,16 +242,29 @@ export const createGardenChat = (plants: Plant[], location: string): Chat => {
     `- ${p.nickname || p.name} (${p.scientificName}): Health is ${p.health}. Care: Water ${p.care.water}, Light ${p.care.sun}.`
   ).join('\n');
 
+  // Get today's date in a readable format (e.g., "December 5, 2025")
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
   const systemInstruction = `You are Seedly, a helpful and friendly AI gardening assistant. 
-    The user is located in ${location}.
+    
+    CONTEXT:
+    - User Location: ${location}
+    - Current Date: ${today}
+    - Season: Infer the season based on the location and date provided above.
     
     Here is the user's current garden inventory:
     ${gardenContext}
     
-    Answer questions specifically about these plants when asked, using them as context. 
-    Provide general gardening advice based on the user's location and climate.
-    Be encouraging, use emojis, and keep answers concise and practical.
-    If the user asks about a plant not in their garden, answer generally but suggest if it would be a good fit for their location.`;
+    INSTRUCTIONS:
+    - Answer questions specifically about these plants when asked, using them as context. 
+    - Provide general gardening advice based on the user's location, current season, and climate.
+    - Be encouraging, use emojis, and keep answers concise and practical.
+    - If the user asks about a plant not in their garden, answer generally but suggest if it would be a good fit for their location.`;
 
   return ai.chats.create({
     model: 'gemini-2.5-flash',

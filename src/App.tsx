@@ -42,7 +42,7 @@ const ALL_ACHIEVEMENTS: Omit<Achievement, 'unlockedAt'>[] = [
 // Initial Mock Data
 const INITIAL_USER: UserProfile = {
     name: "Guest",
-    location: "Unknown",
+    location: "Detecting location...",
     level: 1,
     xp: 0,
     joinedDate: "2023-01-15",
@@ -172,6 +172,46 @@ const App: React.FC = () => {
         initializeRevenueCat();
     }, []);
 
+    useEffect(() => {
+        const fetchLocation = async () => {
+            try {
+                // Check permissions first
+                const permission = await Geolocation.checkPermissions();
+
+                if (permission.location !== 'granted') {
+                    const request = await Geolocation.requestPermissions();
+                    if (request.location !== 'granted') return;
+                }
+
+                // Get position
+                const position = await Geolocation.getCurrentPosition();
+
+                // Reverse Geocoding (Coordinates -> City Name)
+                // We use a free OpenStreetMap API for this demo to convert coords to city
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
+                );
+                const data = await response.json();
+
+                // Extract city/suburb and country
+                const city = data.address.city || data.address.town || data.address.suburb || "Unknown City";
+                const country = data.address.country || "";
+                const locationString = `${city}, ${country}`;
+
+                console.log("📍 Updated Location:", locationString);
+
+                // Update User State
+                setUser(prev => ({ ...prev, location: locationString }));
+
+            } catch (error) {
+                console.error("Error getting location:", error);
+                // Fallback if GPS fails
+                setUser(prev => ({ ...prev, location: "Australia" }));
+            }
+        };
+
+        fetchLocation();
+    }, []);
     // 2. Check Google Session
     useEffect(() => {
         const checkSession = async () => {
