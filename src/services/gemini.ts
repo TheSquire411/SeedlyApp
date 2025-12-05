@@ -5,15 +5,18 @@ import { IdentifyResult, DiagnosisResult, WeatherData, Plant } from "../types";
 // ✅ SECURE CONFIGURATION
 // ---------------------------------------------------------------------------
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const weatherApiKey = import.meta.env.VITE_OPENWEATHERMAP_API_KEY;
 
-// Safety Check: Warn if key is missing
 if (!apiKey) {
   console.error("❌ CRITICAL ERROR: VITE_GEMINI_API_KEY is missing from .env file");
+  throw new Error("Gemini API Key is missing. Check your .env file.");
 }
 
-// 👇 THIS WAS LIKELY MISSING OR BROKEN IN YOUR FILE
-const ai = new GoogleGenAI({ apiKey: apiKey || "" });
+// Initialize Gemini AI
+const ai = new GoogleGenAI({ apiKey });
 // ---------------------------------------------------------------------------
+
+// --- Schemas ---
 
 const identifySchema: Schema = {
   type: Type.OBJECT,
@@ -89,20 +92,12 @@ const diagnosisSchema: Schema = {
   required: ["issue", "description", "treatment", "prevention", "confidence"],
 };
 
-const weatherSchema: Schema = {
-  type: Type.OBJECT,
-  properties: {
-    temp: { type: Type.NUMBER, description: "Estimated temperature in Celsius" },
-    condition: { type: Type.STRING, description: "Weather condition (Sunny, Rainy, Cloudy)" },
-    humidity: { type: Type.NUMBER, description: "Humidity percentage" },
-    icon: { type: Type.STRING, description: "An emoji representing the weather" },
-    advice: { type: Type.STRING, description: "Short gardening advice based on this weather" }
-  },
-  required: ["temp", "condition", "humidity", "icon", "advice"]
-}
+
+// --- Functions ---
 
 export const identifyPlant = async (base64Image: string, location: string): Promise<IdentifyResult> => {
   try {
+    // Remove header if present to get raw base64
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const response = await ai.models.generateContent({
@@ -127,6 +122,7 @@ export const identifyPlant = async (base64Image: string, location: string): Prom
     });
 
     if (response.text) {
+      // ✅ FIXED: Removed ()
       return JSON.parse(response.text) as IdentifyResult;
     }
     throw new Error("No response from Gemini");
@@ -162,6 +158,7 @@ export const diagnosePlant = async (base64Image: string, description: string): P
     });
 
     if (response.text) {
+      // ✅ FIXED: Removed ()
       return JSON.parse(response.text) as DiagnosisResult;
     }
     throw new Error("No response from Gemini");
@@ -173,30 +170,72 @@ export const diagnosePlant = async (base64Image: string, description: string): P
 
 export const getWeatherAdvice = async (location: string): Promise<WeatherData> => {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Generate a realistic current weather report for ${location} (assume current month/season). Provide gardening advice.`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: weatherSchema
-      }
-    });
+    console.log("Fetching real weather for:", location);
 
-    if (response.text) {
-      return JSON.parse(response.text) as WeatherData;
+    // Check if key exists before trying to fetch
+    if (!weatherApiKey) {
+      throw new Error("OpenWeather API Key is missing from .env");
     }
-    throw new Error("No weather data");
+
+    // 1. Get REAL weather data using the variable
+    const weatherRes = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&units=metric&appid=${weatherApiKey}`
+    );
+
+    if (!weatherRes.ok) throw new Error("Weather API failed");
+
+    const weatherData = await weatherRes.json();
+
+    const realTemp = Math.round(weatherData.main.temp);
+    const realCondition = weatherData.weather[0].main;
+    const realHumidity = weatherData.main.humidity;
+
+    // 2. Ask AI for advice based on the REAL data
+    let aiAdvice = "Check your plants based on current conditions.";
+    try {
+      const adviceResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: `The current weather in ${location} is ${realCondition}, ${realTemp}°C with ${realHumidity}% humidity. 
+                   Give 1 short sentence of gardening advice for this specific condition. 
+                   Do not use JSON. Just plain text.`,
+      });
+      if (adviceResponse.text) {
+        // ✅ FIXED: Removed ()
+        aiAdvice = adviceResponse.text;
+      }
+    } catch (aiError) {
+      console.error("AI Advice failed, using default", aiError);
+    }
+
+    // 3. Map Icons and Return
+    const getIcon = (condition: string) => {
+      const map: Record<string, string> = {
+        'Clear': '☀️', 'Clouds': '☁️', 'Rain': 'kT', 'Drizzle': 'kT',
+        'Thunderstorm': '⚡', 'Snow': '❄️', 'Mist': 'zz'
+      };
+      return map[condition] || '🌤️';
+    };
+
+    return {
+      temp: realTemp,
+      condition: realCondition,
+      humidity: realHumidity,
+      icon: getIcon(realCondition),
+      advice: aiAdvice
+    };
+
   } catch (e) {
     console.error("Weather Error", e);
+    // Fallback if weather fails
     return {
       temp: 22,
-      condition: "Sunny",
+      condition: "Unavailable",
       humidity: 50,
-      icon: "☀️",
-      advice: "It's a beautiful day! Check your plants for hydration."
-    }
+      icon: "❓",
+      advice: "Could not load local weather. Please check your connection."
+    };
   }
-}
+};
 
 export const createGardenChat = (plants: Plant[], location: string): Chat => {
   const gardenContext = plants.map(p =>
