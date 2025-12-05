@@ -774,7 +774,7 @@ const App: React.FC = () => {
 
                     <button
                         onClick={() => setSelectedPlant(null)}
-                        className="absolute top-6 left-4 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30 z-50"
+                        className="absolute top-14 left-4 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30 z-50"
                     >
                         <ChevronLeft size={24} />
                     </button>
@@ -1098,7 +1098,7 @@ const App: React.FC = () => {
                 <div className="pb-40 pt-4">
                     <div className="relative rounded-3xl overflow-hidden h-64 shadow-lg mb-6">
                         <img src={selectedImage!} alt="Captured" className="w-full h-full object-cover" />
-                        <button onClick={resetScanner} className="absolute top-4 left-4 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
+                        <button onClick={resetScanner} className="absolute top-14 left-4 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
                             <X size={20} />
                         </button>
                     </div>
