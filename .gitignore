@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 .env
-
+.env.local
 # ---------------------------------
 # Android / Capacitor Specifics (CRITICAL)
 # ---------------------------------
