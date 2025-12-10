@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import Navigation from './components/Navigation';
 import PlantCard from './components/PlantCard';
 import WeatherCard from './components/WeatherCard';
+import WebLanding from './components/WebLanding';
 import { View, Plant, UserProfile, IdentifyResult, DiagnosisResult, Achievement, Reminder, ReminderType, ChatMessage } from './types';
 import { identifyPlant, diagnosePlant, createGardenChat } from './services/gemini';
 import { Chat, GenerateContentResponse } from "@google/genai";
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Geolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 import { initializeRevenueCat, checkSubscriptionStatus, getOfferings, purchasePackage } from './services/revenueCat';
 import { signInWithGoogle, getUser } from './services/authService';
 
@@ -103,6 +105,7 @@ const App: React.FC = () => {
     const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
     const [uid, setUid] = useState<string | null>(null);
     const [isLoadingData, setIsLoadingData] = useState(true);
+    const [showLanding, setShowLanding] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -171,6 +174,15 @@ const App: React.FC = () => {
     useEffect(() => {
         initializeRevenueCat();
     }, []);
+
+    // Platform check for Web Landing
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform() && user.name === "Guest") {
+            setShowLanding(true);
+        } else {
+            setShowLanding(false);
+        }
+    }, [user.name]);
 
     useEffect(() => {
         const fetchLocation = async () => {
@@ -583,6 +595,19 @@ const App: React.FC = () => {
         setDiagnosisResult(null);
         setUserPrompt("");
         setIsAnalyzing(false);
+    };
+
+    // --- Web Login Handler ---
+    const handleWebLogin = async () => {
+        try {
+            const loggedInUser = await signInWithGoogle();
+            if (loggedInUser) {
+                setUser(loggedInUser);
+                setShowLanding(false);
+            }
+        } catch (error) {
+            console.error("Web login failed:", error);
+        }
     };
 
     const getDueTasksCount = () => {
@@ -1401,6 +1426,11 @@ const App: React.FC = () => {
             </div>
         </div>
     );
+
+    // Conditional render: WebLanding for web guests, App for native/logged-in users
+    if (showLanding) {
+        return <WebLanding onLogin={handleWebLogin} />;
+    }
 
     return (
         <div className="min-h-screen bg-[#F3F4F6] text-gray-800 font-sans flex justify-center">
