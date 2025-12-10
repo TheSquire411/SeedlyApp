@@ -38,7 +38,7 @@ const WebLanding: React.FC<WebLandingProps> = ({ onLogin }) => {
 
                 <button
                     onClick={onLogin}
-                    className="bg-brand-dark hover:bg-lime-600 text-white px-5 py-2.5 rounded-full font-bold text-sm transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center gap-2"
+                    className="bg-[#234232] hover:bg-lime-600 text-white px-5 py-2.5 rounded-full font-bold text-sm transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center gap-2"
                 >
                     <span>Sign In</span>
                 </button>
