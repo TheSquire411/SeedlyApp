@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Navigation from './components/Navigation';
+import SubscriptionModal from './components/SubscriptionModal';
 import PlantCard from './components/PlantCard';
 import WeatherCard from './components/WeatherCard';
 import WebLanding from './components/WebLanding';
@@ -57,46 +58,7 @@ const INITIAL_USER: UserProfile = {
     achievements: []
 };
 
-const INITIAL_PLANTS: Plant[] = [
-    {
-        id: '1',
-        name: 'Peace Lily',
-        scientificName: 'Spathiphyllum',
-        nickname: 'Spathy',
-        image: 'https://images.unsplash.com/photo-1593691509543-c55ce2288edc?q=80&w=1000&auto=format&fit=crop',
-        care: { water: 'Weekly', sun: 'Partial Shade', temp: '18-24°C', humidity: 'High' },
-        reminders: [
-            { id: 'r1', type: 'water', title: 'Water', frequencyDays: 7, nextDue: new Date(Date.now() + 86400000).toISOString() },
-            { id: 'r2', type: 'fertilize', title: 'Fertilize', frequencyDays: 30, nextDue: new Date(Date.now() + 86400000 * 14).toISOString() }
-        ],
-        wateringHistory: [
-            new Date(Date.now() - 86400000 * 6).toISOString(),
-            new Date(Date.now() - 86400000 * 13).toISOString()
-        ],
-        companions: [
-            { name: 'Pothos', benefit: 'Shares humidity needs and tolerates similar light' },
-            { name: 'Philodendron', benefit: 'Great structural contrast, same watering schedule' }
-        ],
-        quickTips: [
-            "Keep soil consistently moist but not soggy.",
-            "Mist leaves frequently to simulate high humidity.",
-            "Keep out of direct sunlight to avoid leaf burn."
-        ],
-        visualGuides: [
-            {
-                title: "How to Divide & Repot",
-                steps: [
-                    { title: "Remove from Pot", description: "Gently slide the plant out of its container, supporting the base of the stems." },
-                    { title: "Tease Roots", description: "Loosen the root ball gently with your fingers to remove old soil." },
-                    { title: "Divide Clumps", description: "Identify natural separation points and pull the crowns apart, ensuring each has roots." },
-                    { title: "Pot Up", description: "Place each division into a new pot with fresh, well-draining soil." }
-                ]
-            }
-        ],
-        health: 'Good',
-        dateAdded: new Date().toISOString()
-    }
-];
+const INITIAL_PLANTS: Plant[] = [];
 
 const App: React.FC = () => {
     const [currentView, setCurrentView] = useState<View>(View.DASHBOARD);
@@ -106,6 +68,8 @@ const App: React.FC = () => {
     const [uid, setUid] = useState<string | null>(null);
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [showLanding, setShowLanding] = useState(false);
+    const [isPro, setIsPro] = useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -170,9 +134,14 @@ const App: React.FC = () => {
 
     // --- EFFECTS ---
 
-    // 1. Init RevenueCat
+    // 1. Init RevenueCat & Check Subscription
     useEffect(() => {
-        initializeRevenueCat();
+        const init = async () => {
+            await initializeRevenueCat();
+            const isSubscribed = await checkSubscriptionStatus();
+            setIsPro(isSubscribed);
+        };
+        init();
     }, []);
 
     // Platform check for Web Landing
@@ -282,6 +251,29 @@ const App: React.FC = () => {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages, currentView]);
+
+    // --- Freemium Usage Limit Logic ---
+    const checkUsageLimit = (): boolean => {
+        // Pro users have unlimited access
+        if (isPro) return true;
+
+        // Get today's date string (e.g., "2024-12-10")
+        const today = new Date().toISOString().split('T')[0];
+        const storageKey = `usage_count_${today}`;
+
+        // Get current usage count
+        const currentCount = parseInt(localStorage.getItem(storageKey) || '0', 10);
+
+        if (currentCount < 3) {
+            // Increment usage and allow
+            localStorage.setItem(storageKey, (currentCount + 1).toString());
+            return true;
+        } else {
+            // Limit reached, show upgrade modal
+            setShowUpgradeModal(true);
+            return false;
+        }
+    };
 
     // --- Gamification Logic ---
 
@@ -403,6 +395,7 @@ const App: React.FC = () => {
     };
 
     const handleSendMessage = async () => {
+        if (!checkUsageLimit()) return;
         if (!inputMessage.trim() || !chatSession.current) return;
 
         const userMsg: ChatMessage = {
@@ -471,6 +464,7 @@ const App: React.FC = () => {
     };
 
     const handleIdentify = async () => {
+        if (!checkUsageLimit()) return;
         if (!selectedImage) return;
         setIsAnalyzing(true);
         try {
@@ -491,6 +485,7 @@ const App: React.FC = () => {
     };
 
     const handleDiagnose = async () => {
+        if (!checkUsageLimit()) return;
         if (!selectedImage) return;
         setIsAnalyzing(true);
         try {
@@ -1356,19 +1351,7 @@ const App: React.FC = () => {
                     <h3 className="font-bold text-xl mb-1">Go Pro</h3>
                     <p className="text-lime-100 text-sm mb-4">Unlock unlimited AI diagnosis</p>
                     <button
-                        onClick={async () => {
-                            try {
-                                const offerings = await getOfferings();
-                                if (offerings && offerings.current && offerings.current.monthly) {
-                                    const success = await purchasePackage(offerings.current.monthly);
-                                    if (success) alert("You are now a Pro User! 🌟");
-                                } else {
-                                    alert("No 'monthly' package found. Check RevenueCat dashboard setup.");
-                                }
-                            } catch (e) {
-                                alert("Purchase failed or cancelled");
-                            }
-                        }}
+                        onClick={() => setShowUpgradeModal(true)}
                         className="bg-white text-lime-600 font-bold py-3 px-6 rounded-xl shadow-md active:scale-95 transition-transform w-full"
                     >
                         Upgrade for $4.99
@@ -1477,6 +1460,14 @@ const App: React.FC = () => {
                 setCurrentView(view);
             }}
                 onUpgrade={() => setCurrentView(View.PROFILE)}
+            />
+            <SubscriptionModal
+                isOpen={showUpgradeModal}
+                onClose={() => setShowUpgradeModal(false)}
+                onSuccess={() => {
+                    setIsPro(true);
+                    setShowUpgradeModal(false);
+                }}
             />
         </div>
     );
