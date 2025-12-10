@@ -19,7 +19,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate, onUpgr
   ];
 
   return (
-    <div className="fixed bottom-6 left-4 right-4 h-20 bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 flex items-center justify-between px-6 z-50">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md h-20 bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 flex items-center justify-between px-6 z-50">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = currentView === item.id;
