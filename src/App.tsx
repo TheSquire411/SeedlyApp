@@ -1434,7 +1434,7 @@ const App: React.FC = () => {
 
             {renderPlantDetails()}
 
-            <div className="w-full max-w-md h-screen overflow-y-auto bg-[#F3F4F6] px-6 pt-6 no-scrollbar">
+            <div className="w-full max-w-md h-screen overflow-y-auto bg-[#F3F4F6] px-6 pt-6">
                 {currentView === View.DASHBOARD && renderDashboard()}
                 {currentView === View.GARDEN && renderGarden()}
                 {currentView === View.IDENTIFY && renderScanner('identify')}
