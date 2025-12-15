@@ -394,6 +394,21 @@ const App: React.FC = () => {
         setSelectedPlant(updatedPlant);
     };
 
+    const handleRemovePlant = async () => {
+        if (!selectedPlant || !uid) return;
+
+        if (!confirm("Are you sure you want to remove this plant?")) return;
+
+        try {
+            await deletePlantFromGarden(uid, selectedPlant.id);
+            setPlants(prev => prev.filter(p => p.id !== selectedPlant.id));
+            setSelectedPlant(null);
+        } catch (error) {
+            console.error("Error removing plant:", error);
+            alert("Failed to remove plant.");
+        }
+    };
+
     const handleSendMessage = async () => {
         if (!checkUsageLimit()) return;
         if (!inputMessage.trim() || !chatSession.current) return;
@@ -1087,7 +1102,10 @@ const App: React.FC = () => {
                         </div>
                     )}
 
-                    <button className="w-full py-4 bg-red-50 text-red-500 font-bold rounded-2xl border border-red-100 mb-12">
+                    <button
+                        onClick={handleRemovePlant}
+                        className="w-full py-4 bg-red-50 text-red-500 font-bold rounded-2xl border border-red-100 mb-12"
+                    >
                         Remove Plant
                     </button>
                 </div>
