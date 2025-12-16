@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.seedly.app',
-  appName: 'Seedly',
+  appName: 'Seedly Grow',
   webDir: 'dist',
 
   plugins: {
