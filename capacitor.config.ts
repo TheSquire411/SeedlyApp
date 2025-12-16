@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.seedly.app',
-  appName: 'Seedly',
+  appName: 'Seedly Grow',
   webDir: 'dist',
 
   plugins: {
@@ -15,7 +15,7 @@ const config: CapacitorConfig = {
     // Existing Splash Screen Configuration
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: "#234232", // Your Dark Green
+      backgroundColor: "#435043", // Your Dark Green
       showSpinner: false,
       androidScaleType: "CENTER_CROP",
       splashFullScreen: true,
