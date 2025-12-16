@@ -801,7 +801,8 @@ const App: React.FC = () => {
         if (!selectedPlant) return null;
 
         return (
-            <div className="fixed inset-0 z-50 bg-[#F3F4F6] overflow-y-auto no-scrollbar animate-in slide-in-from-bottom duration-300">
+            <div className="fixed inset-0 z-50 flex justify-center bg-black/30 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="w-full max-w-md h-full bg-[#F3F4F6] overflow-y-auto relative shadow-2xl no-scrollbar animate-in slide-in-from-bottom duration-300">
                 {/* Header Image */}
                 <div className="relative h-80 w-full">
                     <img src={selectedPlant.image} alt={selectedPlant.name} className="w-full h-full object-cover" />
@@ -1108,6 +1109,7 @@ const App: React.FC = () => {
                     >
                         Remove Plant
                     </button>
+                </div>
                 </div>
             </div>
         )
