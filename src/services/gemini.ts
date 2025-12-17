@@ -101,7 +101,7 @@ export const identifyPlant = async (base64Image: string, location: string): Prom
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: {
         parts: [
           {
@@ -137,7 +137,7 @@ export const diagnosePlant = async (base64Image: string, description: string): P
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: {
         parts: [
           {
@@ -194,7 +194,7 @@ export const getWeatherAdvice = async (location: string): Promise<WeatherData> =
     let aiAdvice = "Check your plants based on current conditions.";
     try {
       const adviceResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         contents: `The current weather in ${location} is ${realCondition}, ${realTemp}°C with ${realHumidity}% humidity. 
                    Give 1 short sentence of gardening advice for this specific condition. 
                    Do not use JSON. Just plain text.`,
@@ -267,7 +267,7 @@ export const createGardenChat = (plants: Plant[], location: string): Chat => {
     - If the user asks about a plant not in their garden, answer generally but suggest if it would be a good fit for their location.`;
 
   return ai.chats.create({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3-flash-preview',
     config: {
       systemInstruction
     }
