@@ -1,4 +1,4 @@
-package com.seedly.app;
+package com.seedly.grow;
 
 import android.os.Bundle;
 import android.webkit.WebView;
