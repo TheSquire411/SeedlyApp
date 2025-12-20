@@ -44,6 +44,10 @@ export interface Plant {
   health: 'Good' | 'Needs Attention' | 'Critical';
   diagnosis?: DiagnosisResult;
   dateAdded: string;
+  locationType?: 'indoor' | 'outdoor';
+  microClimate?: string;
+  lastWateredWeather?: string;
+  diagnosisHistory?: DiagnosisRecord[];
 }
 
 export interface DiagnosisResult {
@@ -52,6 +56,12 @@ export interface DiagnosisResult {
   treatment: string[];
   prevention: string;
   confidence: number;
+}
+
+export interface DiagnosisRecord {
+  date: string;
+  result: DiagnosisResult;
+  userConfirmed: boolean;
 }
 
 export interface Achievement {

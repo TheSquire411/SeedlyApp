@@ -105,6 +105,18 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
                         </div>
                     </div>
 
+                    <div className="bg-lime-50 border border-lime-200 rounded-xl p-4 mb-6 relative">
+                        <div className="flex gap-3">
+                            <div className="text-2xl">🛡️</div>
+                            <div>
+                                <h4 className="font-bold text-lime-800 text-sm mb-1">The Seedly Promise</h4>
+                                <p className="text-xs text-lime-700 leading-relaxed">
+                                    No hidden fees. No 'impossible' cancellation flows. You can cancel instantly in your settings. We value your trust.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     {loading ? (
                         <div className="flex justify-center py-8">
                             <Loader2 size={32} className="text-lime-500 animate-spin" />
