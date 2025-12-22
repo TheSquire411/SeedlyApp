@@ -520,7 +520,8 @@ const App: React.FC = () => {
             });
 
         } catch (error) {
-            alert("Failed to identify plant. Please try again.");
+            console.error("Plant identification error:", error);
+            alert(`Failed to identify plant: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsAnalyzing(false);
         }
@@ -1032,7 +1033,7 @@ const App: React.FC = () => {
                                                 <div className="absolute left-[23px] top-2 bottom-6 w-0.5 bg-indigo-100"></div>
 
                                                 <div className="space-y-6">
-                                                    {guide.steps.map((step, stepIdx) => (
+                                                    {guide.steps && guide.steps.map((step, stepIdx) => (
                                                         <div key={stepIdx} className="relative flex gap-4">
                                                             <div className="w-5 h-5 rounded-full bg-indigo-500 border-4 border-white shadow-sm flex items-center justify-center flex-shrink-0 z-10 mt-0.5">
                                                                 {/* Dot */}

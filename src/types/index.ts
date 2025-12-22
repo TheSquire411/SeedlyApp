@@ -1,3 +1,12 @@
+export enum View {
+  DASHBOARD = 'DASHBOARD',
+  GARDEN = 'GARDEN',
+  IDENTIFY = 'IDENTIFY',
+  DIAGNOSE = 'DIAGNOSE',
+  PROFILE = 'PROFILE',
+  CHAT = 'CHAT',
+}
+
 export type ReminderType = 'water' | 'fertilize' | 'repot' | 'mist' | 'custom';
 
 export interface Reminder {
