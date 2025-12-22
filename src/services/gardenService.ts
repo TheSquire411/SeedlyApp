@@ -1,5 +1,5 @@
 import { db } from './firebaseConfig';
-import { collection, doc, getDocs, setDoc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { Plant, Reminder } from '../types';
 
 const COLLECTION_NAME = 'gardens';
@@ -91,5 +91,44 @@ export const deletePlantFromGarden = async (userId: string, plantId: string): Pr
     } catch (error) {
         console.error("Error deleting plant:", error);
         throw error;
+    }
+};
+
+/**
+ * Increments the daily usage counter in Firestore and checks if the free limit is exceeded.
+ * @param userId - The Firebase user ID
+ * @returns true if usage is allowed, false if limit reached
+ */
+export const incrementAndCheckFreeUsage = async (userId: string): Promise<boolean> => {
+    const FREE_LIMIT = 3;
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    try {
+        const userRef = doc(db, COLLECTION_NAME, userId);
+        const userDoc = await getDoc(userRef);
+        const data = userDoc.data();
+
+        let currentCount = 0;
+        // If the document exists and lastUsageDate is today, use the existing count
+        if (userDoc.exists() && data?.lastUsageDate === today) {
+            currentCount = data.dailyUsageCount || 0;
+        }
+        // Otherwise, it's a new day or new user, so count resets to 0
+
+        if (currentCount < FREE_LIMIT) {
+            // Increment and update
+            await setDoc(userRef, {
+                lastUsageDate: today,
+                dailyUsageCount: currentCount + 1
+            }, { merge: true });
+            return true;
+        }
+
+        // Limit reached
+        return false;
+    } catch (error) {
+        console.error("Error checking free usage limit:", error);
+        // On error, allow usage to avoid blocking legitimate users
+        return true;
     }
 };

@@ -20,7 +20,8 @@ import {
     getMyGarden,
     addPlantToGarden,
     updatePlantInGarden,
-    deletePlantFromGarden
+    deletePlantFromGarden,
+    incrementAndCheckFreeUsage
 } from './services/gardenService';
 import { calculateNextWatering } from './services/smartScheduler';
 
@@ -253,27 +254,23 @@ const App: React.FC = () => {
         }
     }, [messages, currentView]);
 
-    // --- Freemium Usage Limit Logic ---
-    const checkUsageLimit = (): boolean => {
+    // --- Freemium Usage Limit Logic (Firestore-based) ---
+    const verifyUsageLimit = async (): Promise<boolean> => {
         // Pro users have unlimited access
         if (isPro) return true;
 
-        // Get today's date string (e.g., "2024-12-10")
-        const today = new Date().toISOString().split('T')[0];
-        const storageKey = `usage_count_${today}`;
+        // Must have a user ID to check Firestore
+        if (!uid) {
+            console.error("Cannot check usage limit: No user ID");
+            return false;
+        }
 
-        // Get current usage count
-        const currentCount = parseInt(localStorage.getItem(storageKey) || '0', 10);
-
-        if (currentCount < 3) {
-            // Increment usage and allow
-            localStorage.setItem(storageKey, (currentCount + 1).toString());
-            return true;
-        } else {
-            // Limit reached, show upgrade modal
+        const allowed = await incrementAndCheckFreeUsage(uid);
+        if (!allowed) {
             setShowUpgradeModal(true);
             return false;
         }
+        return true;
     };
 
     // --- Gamification Logic ---
@@ -437,7 +434,7 @@ const App: React.FC = () => {
     };
 
     const handleSendMessage = async () => {
-        if (!checkUsageLimit()) return;
+        if (!await verifyUsageLimit()) return;
         if (!inputMessage.trim() || !chatSession.current) return;
 
         const userMsg: ChatMessage = {
@@ -506,7 +503,7 @@ const App: React.FC = () => {
     };
 
     const handleIdentify = async () => {
-        if (!checkUsageLimit()) return;
+        if (!await verifyUsageLimit()) return;
         if (!selectedImage) return;
         setIsAnalyzing(true);
         try {
@@ -528,7 +525,7 @@ const App: React.FC = () => {
     };
 
     const handleDiagnose = async () => {
-        if (!checkUsageLimit()) return;
+        if (!await verifyUsageLimit()) return;
         if (!selectedImage) return;
         setIsAnalyzing(true);
         try {
