@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "948687707686-vnn1ptd4609b2k3q9499hdneoo7a1oiu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.seedly.app",
+            "certificate_hash": "98270affe1d16c55837929234821b602520815d9"
+          }
+        },
+        {
           "client_id": "948687707686-u4dkpcvh4jl4m54ii24glibi7k370nbm.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -58,6 +66,22 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "948687707686-5u9cam1cdii4lraprmcben6kabh4dtv8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.seedly.grow",
+            "certificate_hash": "98270affe1d16c55837929234821b602520815d9"
+          }
+        },
+        {
+          "client_id": "948687707686-akuousat96ihjqn62o04v6cendk0f9lt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.seedly.grow",
+            "certificate_hash": "c8b34a5b5400a29fda23d5aec80e1e85f5af1421"
+          }
+        },
         {
           "client_id": "948687707686-u4dkpcvh4jl4m54ii24glibi7k370nbm.apps.googleusercontent.com",
           "client_type": 3

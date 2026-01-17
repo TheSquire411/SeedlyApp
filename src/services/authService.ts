@@ -5,7 +5,7 @@ import { UserProfile } from "../types";
 const mapUser = (firebaseUser: any): UserProfile => {
     return {
         name: firebaseUser.displayName || "Gardener",
-        location: "Unknown", // We'll let the Geo code handle this later
+        location: "Unknown",
         level: 1,
         xp: 0,
         joinedDate: new Date().toISOString(),
@@ -22,7 +22,11 @@ const mapUser = (firebaseUser: any): UserProfile => {
 export const signInWithGoogle = async (): Promise<UserProfile | null> => {
     try {
         // 1. The Native Login Flow
-        const result = await FirebaseAuthentication.signInWithGoogle();
+        const result = await FirebaseAuthentication.signInWithGoogle({
+            scopes: ["email", "profile", "openid"],
+            mode: 'popup',
+            useCredentialManager: false  // Use legacy GoogleSignInClient (more reliable)
+        });
 
         // 2. Success! We have a user.
         const user = result.user;

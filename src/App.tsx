@@ -72,6 +72,7 @@ const App: React.FC = () => {
     const [showLanding, setShowLanding] = useState(false);
     const [isPro, setIsPro] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -168,11 +169,15 @@ const App: React.FC = () => {
 
                 // Get position
                 const position = await Geolocation.getCurrentPosition();
+                const { latitude, longitude } = position.coords;
+
+                // Save coordinates immediately for weather API
+                setCoords({ lat: latitude, lon: longitude });
 
                 // Reverse Geocoding (Coordinates -> City Name)
                 // We use a free OpenStreetMap API for this demo to convert coords to city
                 const response = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
                 );
                 const data = await response.json();
 
@@ -207,38 +212,7 @@ const App: React.FC = () => {
         checkSession();
     }, []);
 
-    // 3. Get Location
-    useEffect(() => {
-        const getUserLocation = async () => {
-            try {
-                const permission = await Geolocation.checkPermissions();
-                if (permission.location === 'prompt' || permission.location === 'prompt-with-rationale') {
-                    await Geolocation.requestPermissions();
-                }
-
-                const position = await Geolocation.getCurrentPosition();
-                const { latitude, longitude } = position.coords;
-
-                // Convert to City Name using BigDataCloud (Free API)
-                const response = await fetch(
-                    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-                );
-                const data = await response.json();
-
-                const city = data.city || data.locality || "Unknown City";
-                const region = data.principalSubdivision || data.countryName;
-                const locationString = `${city}, ${region}`;
-
-                setUser(prev => ({ ...prev, location: locationString }));
-                console.log("📍 Location updated:", locationString);
-
-            } catch (error) {
-                console.error("Error getting location", error);
-            }
-        };
-
-        getUserLocation();
-    }, []);
+    // 3. Get Location - REMOVED: This duplicate useEffect was conflicting with the main location logic above
 
     // 4. Chat Session
     useEffect(() => {
@@ -684,7 +658,7 @@ const App: React.FC = () => {
             </div>
 
             {/* Weather */}
-            <WeatherCard location={user.location} />
+            <WeatherCard location={user.location} coords={coords} />
 
             {/* Tasks / Status */}
             <div>
@@ -1236,56 +1210,62 @@ const App: React.FC = () => {
                                 Add to Garden <span className="text-lime-200 text-sm">(+50 XP)</span>
                             </button>
                         </div>
-                    ) : diagnosisResult ? (
-                        <div className="space-y-6">
-                            <div className="bg-white rounded-3xl p-6 shadow-sm border-l-4 border-red-400">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h2 className="text-2xl font-bold text-gray-800">Diagnosis Report</h2>
-                                    <div className={`px-3 py-1 rounded-full text-sm font-semibold ${(diagnosisResult.confidence || 0) > 0.8 ? 'bg-green-100 text-green-700' :
-                                        (diagnosisResult.confidence || 0) > 0.5 ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-red-100 text-red-700'
-                                        }`}>
-                                        {Math.round((diagnosisResult.confidence || 0) * 100)}% Confidence
-                                    </div>
-                                </div>
-                                <p className="text-red-500 font-semibold text-lg">{diagnosisResult.issue}</p>
-                                <p className="mt-3 text-gray-600 mb-4">{diagnosisResult.description}</p>
+                    ) : diagnosisResult ? (() => {
+                        // Normalize confidence score: if > 1, assume it's 0-100 scale and divide by 100
+                        const rawConfidence = diagnosisResult.confidence || 0;
+                        const normalizedConfidence = rawConfidence > 1 ? rawConfidence / 100 : rawConfidence;
 
-                                {(diagnosisResult.confidence || 0) < 0.6 && (
-                                    <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100 mt-4">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <AlertTriangle className="text-orange-500" size={20} />
-                                            <h4 className="font-bold text-orange-800">Unsure?</h4>
+                        return (
+                            <div className="space-y-6">
+                                <div className="bg-white rounded-3xl p-6 shadow-sm border-l-4 border-red-400">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h2 className="text-2xl font-bold text-gray-800">Diagnosis Report</h2>
+                                        <div className={`px-3 py-1 rounded-full text-sm font-semibold ${normalizedConfidence > 0.8 ? 'bg-green-100 text-green-700' :
+                                            normalizedConfidence > 0.5 ? 'bg-yellow-100 text-yellow-700' :
+                                                'bg-red-100 text-red-700'
+                                            }`}>
+                                            {Math.round(normalizedConfidence * 100)}% Confidence
                                         </div>
-                                        <p className="text-sm text-orange-700 mb-3">AI isn't perfect. Share this with our community experts.</p>
-                                        <button className="w-full bg-white text-orange-600 font-bold py-2 rounded-xl shadow-sm border border-orange-200 active:scale-95 transition-transform">
-                                            Ask Human
-                                        </button>
                                     </div>
-                                )}
-                            </div>
+                                    <p className="text-red-500 font-semibold text-lg">{diagnosisResult.issue}</p>
+                                    <p className="mt-3 text-gray-600 mb-4">{diagnosisResult.description}</p>
 
-                            <div className="bg-white rounded-3xl p-6 shadow-sm">
-                                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                    <CheckCircle className="text-lime-500" size={20} />
-                                    Treatment Plan
-                                </h3>
-                                <ul className="space-y-3">
-                                    {diagnosisResult.treatment.map((step, i) => (
-                                        <li key={i} className="flex gap-3 text-sm text-gray-600">
-                                            <span className="w-6 h-6 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xs text-gray-500">{i + 1}</span>
-                                            {step}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                                    {normalizedConfidence < 0.6 && (
+                                        <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100 mt-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <AlertTriangle className="text-orange-500" size={20} />
+                                                <h4 className="font-bold text-orange-800">Unsure?</h4>
+                                            </div>
+                                            <p className="text-sm text-orange-700 mb-3">AI isn't perfect. Share this with our community experts.</p>
+                                            <button className="w-full bg-white text-orange-600 font-bold py-2 rounded-xl shadow-sm border border-orange-200 active:scale-95 transition-transform">
+                                                Ask Human
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
 
-                            <div className="bg-blue-50 rounded-3xl p-6">
-                                <h3 className="font-bold text-blue-800 mb-2 text-sm uppercase">Prevention</h3>
-                                <p className="text-blue-700 text-sm">{diagnosisResult.prevention}</p>
+                                <div className="bg-white rounded-3xl p-6 shadow-sm">
+                                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                        <CheckCircle className="text-lime-500" size={20} />
+                                        Treatment Plan
+                                    </h3>
+                                    <ul className="space-y-3">
+                                        {diagnosisResult.treatment.map((step, i) => (
+                                            <li key={i} className="flex gap-3 text-sm text-gray-600">
+                                                <span className="w-6 h-6 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xs text-gray-500">{i + 1}</span>
+                                                {step}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                <div className="bg-blue-50 rounded-3xl p-6">
+                                    <h3 className="font-bold text-blue-800 mb-2 text-sm uppercase">Prevention</h3>
+                                    <p className="text-blue-700 text-sm">{diagnosisResult.prevention}</p>
+                                </div>
                             </div>
-                        </div>
-                    ) : null}
+                        );
+                    })() : null}
                 </div>
             );
         }

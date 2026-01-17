@@ -88,7 +88,7 @@ const diagnosisSchema: Schema = {
       description: "Step by step treatment instructions"
     },
     prevention: { type: Type.STRING, description: "How to prevent this in the future" },
-    confidence: { type: Type.NUMBER, description: "Confidence score between 0 and 100" },
+    confidence: { type: Type.NUMBER, description: "Confidence score as a decimal between 0.0 and 1.0 (e.g. 0.95)" },
   },
   required: ["issue", "description", "treatment", "prevention", "confidence"],
 };
@@ -321,18 +321,20 @@ export const diagnosePlant = async (base64Image: string, description: string): P
   }
 };
 
-export const getWeatherAdvice = async (location: string): Promise<WeatherData> => {
+export const getWeatherAdvice = async (location: string, coords?: { lat: number; lon: number }): Promise<WeatherData> => {
   try {
-    console.log("Fetching real weather for:", location);
+    console.log("Fetching real weather for:", location, coords ? `(${coords.lat}, ${coords.lon})` : "");
 
     if (!weatherApiKey) {
       throw new Error("OpenWeather API Key is missing from .env");
     }
 
-    // 1. Get REAL weather data
-    const weatherRes = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&units=metric&appid=${weatherApiKey}`
-    );
+    // 1. Get REAL weather data - prefer coords for accuracy, fallback to location string
+    const weatherUrl = coords
+      ? `https://api.openweathermap.org/data/2.5/weather?lat=${coords.lat}&lon=${coords.lon}&units=metric&appid=${weatherApiKey}`
+      : `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&units=metric&appid=${weatherApiKey}`;
+
+    const weatherRes = await fetch(weatherUrl);
 
     if (!weatherRes.ok) throw new Error("Weather API failed");
 

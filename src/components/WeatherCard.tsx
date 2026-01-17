@@ -3,22 +3,40 @@ import { WeatherData } from '../types';
 import { getWeatherAdvice } from '../services/gemini';
 import { CloudSun, Droplets, Wind } from 'lucide-react';
 
+const CACHE_KEY = 'seedly_weather_cache';
+
 interface WeatherCardProps {
   location: string;
+  coords?: { lat: number; lon: number } | null;
 }
 
-const WeatherCard: React.FC<WeatherCardProps> = ({ location }) => {
+const WeatherCard: React.FC<WeatherCardProps> = ({ location, coords }) => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Load cached data on mount to prevent blank tile flash
+  useEffect(() => {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const cachedData = JSON.parse(cached) as WeatherData;
+        setWeather(cachedData);
+      } catch (e) {
+        console.warn("Failed to parse cached weather data");
+      }
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
     const fetchWeather = async () => {
       try {
-        const data = await getWeatherAdvice(location);
+        const data = await getWeatherAdvice(location, coords ?? undefined);
         if (mounted) {
           setWeather(data);
           setLoading(false);
+          // Cache the new data
+          localStorage.setItem(CACHE_KEY, JSON.stringify(data));
         }
       } catch (error) {
         console.error("Failed to fetch weather", error);
@@ -28,7 +46,7 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ location }) => {
 
     fetchWeather();
     return () => { mounted = false; };
-  }, [location]);
+  }, [location, coords]);
 
   if (loading) {
     return (
@@ -49,17 +67,17 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ location }) => {
           <p className="text-lime-100 font-medium text-sm">{location}</p>
           <h2 className="text-3xl font-bold mt-1">{weather.temp}°C</h2>
           <div className="flex items-center gap-2 mt-1 text-lime-50">
-             <span>{weather.icon}</span>
-             <span className="capitalize">{weather.condition}</span>
+            <span>{weather.icon}</span>
+            <span className="capitalize">{weather.condition}</span>
           </div>
         </div>
-        
+
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-md px-2 py-1 rounded-lg">
             <Droplets size={12} />
             <span>{weather.humidity}%</span>
           </div>
-           <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-md px-2 py-1 rounded-lg">
+          <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-md px-2 py-1 rounded-lg">
             <Wind size={12} />
             <span>12 km/h</span>
           </div>
