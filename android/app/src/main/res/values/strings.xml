@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Seedly</string>
-    <string name="title_activity_main">Seedly</string>
+    <string name="app_name">Seedly Grow</string>
+    <string name="title_activity_main">Seedly Grow</string>
     <string name="package_name">com.seedly.grow</string>
     <string name="custom_url_scheme">com.seedly.grow</string>
     <string name="default_web_client_id">948687707686-u4dkpcvh4jl4m54ii24glibi7k370nbm.apps.googleusercontent.com</string>
